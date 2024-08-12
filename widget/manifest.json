@@ -1,0 +1,32 @@
+{
+  "widget":{
+    "name": "widget.name",
+    "description": "widget.description",
+    "short_description": "widget.short_description",
+    "code": "sample",
+    "version": "1.0.0",
+    "interface_version": 2,
+    "init_once": false,
+    "locale":[
+      "ru",
+      "en"
+    ],
+    "installation": true
+  },
+  "locations":[
+    "lcard-0",
+    "settings"
+  ],
+  "settings":{
+    "api_key":{
+      "name": "settings.api_key",
+      "type": "text",
+      "required": true
+    },
+    "agreement":{
+      "name": "settings.agreement",
+      "type": "custom",
+      "required": true
+    }
+  }
+}
