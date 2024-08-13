@@ -5,6 +5,8 @@ import JSZip from 'jszip'
 import {globby} from 'globby';
 import uniqid from 'uniqid'
 import decomment from 'decomment';
+import {transformSync} from '@babel/core';
+import stripDebug from 'strip-debug';
 
 export class AmoWidgetPacker {
   buildWidgetPath;
@@ -45,11 +47,13 @@ export class AmoWidgetPacker {
     await this.updateManifest();
     await this.removeComments();
 
-    const filesConsoleLogs = await this.checkForConsoleLogs();
-    await this.removeConsoleLog(filesConsoleLogs);
+    // const filesConsoleLogs = await this.checkForConsoleLogs();
+    await this.removeConsoleLog();
 
+    /*
     const filesConsoleError = await this.checkForConsoleErrors();
     await this.removeConsoleError(filesConsoleError);
+    */
 
     await this.zip();
   }
@@ -121,7 +125,7 @@ export class AmoWidgetPacker {
   }
 
   
-
+  
   async checkForConsoleLogs(showInfo = true) {
     const filesWithConsoles = [];
     const filePaths = await globby(['**/**.js'], { cwd: this.buildWidgetPath })
@@ -141,16 +145,23 @@ export class AmoWidgetPacker {
     };
   
     return filesWithConsoles;
-  }
+  }  
   
-  async removeConsoleLog(filePaths) {
-    console.log('files for removing', filePaths.length);
+  async removeConsoleLog() {
+    const filePaths = await globby(['**/**.js'], { cwd: this.buildWidgetPath })
+    console.log('files for check', filePaths.length);
+
     for (const filePath of filePaths) {
       const p = path.resolve(this.buildWidgetPath, filePath);
       const fileContent = await fsp.readFile(p, "utf8");
-      //const regex = new RegExp(/console\.log\(([^)]+)\);?/g);
-      const regexLog = new RegExp(/console\.log\((.|\n)*?\);?/g);
-      const result = fileContent.replace(regexLog, "");
+      // const regex = new RegExp(/console\.log\(([^)]+)\);?/g);
+      // const regexLog = new RegExp(/console\.log\((.|\n)*?\);?/g);
+      const result = transformSync(fileContent, {
+        plugins: [stripDebug]
+      }).code;
+      
+      // console.log('result', result);
+      // const result = fileContent.replace(regexLog, "");
   
       await fsp.writeFile(p, result, "utf8");
       console.log(`console.log was removed from file: ${filePath}`);
@@ -158,37 +169,4 @@ export class AmoWidgetPacker {
   }
 
 
-  async checkForConsoleErrors(showInfo = true) {
-    const filesWithConsoles = [];
-    const filePaths = await globby(['**/**.js'], { cwd: this.buildWidgetPath })
-    console.log('check console.error', filePaths.length);
-    for (const filePath of filePaths) {
-      const p = path.resolve(this.buildWidgetPath, filePath)
-      const fileContent = await fsp.readFile(p, 'utf8');
-      // const regexError = new RegExp(/console\.error\(([^)]+)\);?/g);
-      // const regex = new RegExp(/console\.log\(.*?\);?/g);
-      const regexError = new RegExp(/console\.error\((.|\n)*?\);?/g);
-      if (regexError.test(fileContent)) {
-        if (showInfo) {
-          console.log(`console.error was found in file: ${filePath}`);
-        }
-        filesWithConsoles.push(filePath);
-      }
-    };
-  
-    return filesWithConsoles;
-  }
-  
-  async removeConsoleError(filePaths) {
-    console.log('files for removing', filePaths.length);
-    for (const filePath of filePaths) {
-      const p = path.resolve(this.buildWidgetPath, filePath);
-      const fileContent = await fsp.readFile(p, "utf8");
-      const regexError = new RegExp(/console\.error\((.|\n)*?\);?/g);
-      const result = fileContent.replace(regexError, "");
-  
-      await fsp.writeFile(p, result, "utf8");
-      console.log(`console.error was removed from file: ${filePath}`);
-    };
-  }
 }

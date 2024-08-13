@@ -1,6 +1,6 @@
 {
   "name": "amogrip",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "",
   "main": "index.js",
   "type": "module",
@@ -10,10 +10,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@babel/core": "^7.25.2",
     "decomment": "^0.9.5",
     "fs-extra": "^11.2.0",
     "globby": "^14.0.2",
     "jszip": "^3.10.1",
+    "strip-debug": "^7.0.0",
     "uniqid": "^5.4.0"
   }
 }
