@@ -13,6 +13,7 @@ export class AmoWidgetPacker {
   debugKey = 'rsDebugUrl_' + uniqid();
   version;
   buildFile;
+  devEntryPoint;
 
   constructor(options) {
     this.buildWidgetPath = options.buildWidgetPath || './build';
@@ -20,6 +21,7 @@ export class AmoWidgetPacker {
     this.version = options.version || 'latest';
     this.bundleType = options.bundleType || 'dev';
     this.buildFile = options.buildFile || 'build.js';
+    this.devEntryPoint = options.devEntryPoint || 'http://localhost:3000/';
   }
 
   get archivePath() {
@@ -42,6 +44,10 @@ export class AmoWidgetPacker {
     await this.prepareScript();
     await this.updateManifest();
     await this.removeComments();
+
+    const files = await this.checkForConsoleLogs();
+    await this.removeConsoleLog(files);
+
     await this.zip();
   }
 
@@ -56,12 +62,11 @@ export class AmoWidgetPacker {
 
   async prepareScript () {
     const localStoragePlace = `localStorage['${this.debugKey}']`;
-    const entrypoint = 'https://localhost:3000/';
 
     const scriptFile = (await fsp.readFile(path.resolve(this.widgetDir, 'script.js'), 'utf8')).toString();
     let modifiedScriptFile;
     if (this.bundleType === 'dev') {
-      modifiedScriptFile = scriptFile.replace('@entrypoint@', `\${${localStoragePlace} || '${entrypoint}'}`);
+      modifiedScriptFile = scriptFile.replace('@entrypoint@', `\${${localStoragePlace} || '${this.devEntryPoint}'}`);
     } else {
       modifiedScriptFile = scriptFile.replace('@entrypoint@', `./build.js?version=${this.version}`);
     }
@@ -105,5 +110,38 @@ export class AmoWidgetPacker {
     const modifiedManifestFile = JSON.stringify(manifestObject, null, 2);
 
     await fsp.writeFile(path.resolve(this.buildWidgetPath, 'manifest.json'), modifiedManifestFile);
+  }
+
+  async checkForConsoleLogs(showInfo = true) {
+    const filesWithConsoles = [];
+    const filePaths = await globby(['**/**.js'], { cwd: this.buildWidgetPath })
+    console.log('check console.log', filePaths.length);
+    for (const filePath of filePaths) {
+      const p = path.resolve(this.buildWidgetPath, filePath)
+      const fileContent = await fsp.readFile(p, 'utf8');
+      const regex = new RegExp(/console\.log\(([^)]+)\);?/g);
+      // const regex = new RegExp(/console\.log\(.*?\);?/g);      
+      if (regex.test(fileContent)) {
+        if (showInfo) {
+          console.log(`console.log was found in file: ${filePath}`);
+        }
+        filesWithConsoles.push(filePath);
+      }
+    };
+  
+    return filesWithConsoles;
+  }
+  
+  async removeConsoleLog(filePaths) {
+    console.log('files for removing', filePaths.length);
+    for (const filePath of filePaths) {
+      const p = path.resolve(this.buildWidgetPath, filePath);
+      const fileContent = await fsp.readFile(p, "utf8");
+      const regex = new RegExp(/console\.log\(([^)]+)\);?/g);
+      const result = fileContent.replace(regex, "");
+  
+      await fsp.writeFile(p, result, "utf8");
+      console.log(`console.log was removed from file: ${filePath}`);
+    };
   }
 }
