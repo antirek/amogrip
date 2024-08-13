@@ -79,8 +79,13 @@ export class AmoWidgetPacker {
     const filePaths = await globby(['**', '!*.zip'], { cwd: this.buildWidgetPath })
 
     filePaths.forEach(filePath => {
-      zip.file(filePath, fsp.readFile(path.resolve(this.buildWidgetPath, filePath)))
-    })
+      zip.file(filePath, fsp.readFile(path.resolve(this.buildWidgetPath, filePath)), {
+        compression: "DEFLATE",
+        compressionOptions: {
+          level: 9
+        },
+      });
+    });
 
     const archive = (await zip.generateAsync({ type: 'nodebuffer' }));
     await fsp.writeFile(this.archivePath, archive)
