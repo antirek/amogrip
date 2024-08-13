@@ -3,3 +3,8 @@ define([`@entrypoint@`], m => {
     return m.default(this)
   }
 })
+
+
+console.log('test')
+
+console.error('test')

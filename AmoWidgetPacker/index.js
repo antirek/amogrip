@@ -45,8 +45,11 @@ export class AmoWidgetPacker {
     await this.updateManifest();
     await this.removeComments();
 
-    const files = await this.checkForConsoleLogs();
-    await this.removeConsoleLog(files);
+    const filesConsoleLogs = await this.checkForConsoleLogs();
+    await this.removeConsoleLog(filesConsoleLogs);
+
+    const filesConsoleError = await this.checkForConsoleErrors();
+    await this.removeConsoleError(filesConsoleError);
 
     await this.zip();
   }
@@ -124,9 +127,9 @@ export class AmoWidgetPacker {
     for (const filePath of filePaths) {
       const p = path.resolve(this.buildWidgetPath, filePath)
       const fileContent = await fsp.readFile(p, 'utf8');
-      const regex = new RegExp(/console\.log\(([^)]+)\);?/g);
-      // const regex = new RegExp(/console\.log\(.*?\);?/g);      
-      if (regex.test(fileContent)) {
+      const regexLog = new RegExp(/console\.log\(([^)]+)\);?/g);
+      // const regex = new RegExp(/console\.log\(.*?\);?/g);
+      if (regexLog.test(fileContent)) {
         if (showInfo) {
           console.log(`console.log was found in file: ${filePath}`);
         }
@@ -147,6 +150,40 @@ export class AmoWidgetPacker {
   
       await fsp.writeFile(p, result, "utf8");
       console.log(`console.log was removed from file: ${filePath}`);
+    };
+  }
+
+
+  async checkForConsoleErrors(showInfo = true) {
+    const filesWithConsoles = [];
+    const filePaths = await globby(['**/**.js'], { cwd: this.buildWidgetPath })
+    console.log('check console.error', filePaths.length);
+    for (const filePath of filePaths) {
+      const p = path.resolve(this.buildWidgetPath, filePath)
+      const fileContent = await fsp.readFile(p, 'utf8');
+      const regexError = new RegExp(/console\.error\(([^)]+)\);?/g);
+      // const regex = new RegExp(/console\.log\(.*?\);?/g);
+      if (regexError.test(fileContent)) {
+        if (showInfo) {
+          console.log(`console.error was found in file: ${filePath}`);
+        }
+        filesWithConsoles.push(filePath);
+      }
+    };
+  
+    return filesWithConsoles;
+  }
+  
+  async removeConsoleError(filePaths) {
+    console.log('files for removing', filePaths.length);
+    for (const filePath of filePaths) {
+      const p = path.resolve(this.buildWidgetPath, filePath);
+      const fileContent = await fsp.readFile(p, "utf8");
+      const regex = new RegExp(/console\.error\(([^)]+)\);?/g);
+      const result = fileContent.replace(regex, "");
+  
+      await fsp.writeFile(p, result, "utf8");
+      console.log(`console.error was removed from file: ${filePath}`);
     };
   }
 }
