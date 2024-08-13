@@ -5,8 +5,9 @@ import JSZip from 'jszip'
 import {globby} from 'globby';
 import uniqid from 'uniqid'
 import decomment from 'decomment';
-import {transformSync} from '@babel/core';
-import stripDebug from 'strip-debug';
+// import {transformSync} from '@babel/core';
+// import stripDebug from 'strip-debug';
+import * as UglifyJS from "uglify-js";
 
 export class AmoWidgetPacker {
   buildWidgetPath;
@@ -156,11 +157,19 @@ export class AmoWidgetPacker {
       const fileContent = await fsp.readFile(p, "utf8");
       // const regex = new RegExp(/console\.log\(([^)]+)\);?/g);
       // const regexLog = new RegExp(/console\.log\((.|\n)*?\);?/g);
+      /*
       const result = transformSync(fileContent, {
         plugins: [stripDebug]
       }).code;
-      
-      // console.log('result', result);
+      */
+      const options = {
+        compress: {
+          drop_console: true,
+        },
+      };
+      const result = UglifyJS.minify(fileContent, options).code;
+
+      console.log('result', result);
       // const result = fileContent.replace(regexLog, "");
   
       await fsp.writeFile(p, result, "utf8");

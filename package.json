@@ -1,6 +1,6 @@
 {
   "name": "amogrip",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "",
   "main": "index.js",
   "type": "module",
@@ -16,6 +16,7 @@
     "globby": "^14.0.2",
     "jszip": "^3.10.1",
     "strip-debug": "^7.0.0",
+    "uglify-js": "^3.19.2",
     "uniqid": "^5.4.0"
   }
 }
