@@ -120,6 +120,8 @@ export class AmoWidgetPacker {
     await fsp.writeFile(path.resolve(this.buildWidgetPath, 'manifest.json'), modifiedManifestFile);
   }
 
+  
+
   async checkForConsoleLogs(showInfo = true) {
     const filesWithConsoles = [];
     const filePaths = await globby(['**/**.js'], { cwd: this.buildWidgetPath })
@@ -127,8 +129,9 @@ export class AmoWidgetPacker {
     for (const filePath of filePaths) {
       const p = path.resolve(this.buildWidgetPath, filePath)
       const fileContent = await fsp.readFile(p, 'utf8');
-      const regexLog = new RegExp(/console\.log\(([^)]+)\);?/g);
-      // const regex = new RegExp(/console\.log\(.*?\);?/g);
+      // const regexLog = new RegExp(/console\.log\((.|\n)*?\);?/g);
+      // const regexLog = new RegExp(/console\.log\(.*?\);?/g);
+      const regexLog = new RegExp(/console\.log\((.|\n)*?\);?/g);
       if (regexLog.test(fileContent)) {
         if (showInfo) {
           console.log(`console.log was found in file: ${filePath}`);
@@ -145,8 +148,9 @@ export class AmoWidgetPacker {
     for (const filePath of filePaths) {
       const p = path.resolve(this.buildWidgetPath, filePath);
       const fileContent = await fsp.readFile(p, "utf8");
-      const regex = new RegExp(/console\.log\(([^)]+)\);?/g);
-      const result = fileContent.replace(regex, "");
+      //const regex = new RegExp(/console\.log\(([^)]+)\);?/g);
+      const regexLog = new RegExp(/console\.log\((.|\n)*?\);?/g);
+      const result = fileContent.replace(regexLog, "");
   
       await fsp.writeFile(p, result, "utf8");
       console.log(`console.log was removed from file: ${filePath}`);
@@ -161,8 +165,9 @@ export class AmoWidgetPacker {
     for (const filePath of filePaths) {
       const p = path.resolve(this.buildWidgetPath, filePath)
       const fileContent = await fsp.readFile(p, 'utf8');
-      const regexError = new RegExp(/console\.error\(([^)]+)\);?/g);
+      // const regexError = new RegExp(/console\.error\(([^)]+)\);?/g);
       // const regex = new RegExp(/console\.log\(.*?\);?/g);
+      const regexError = new RegExp(/console\.error\((.|\n)*?\);?/g);
       if (regexError.test(fileContent)) {
         if (showInfo) {
           console.log(`console.error was found in file: ${filePath}`);
@@ -179,8 +184,8 @@ export class AmoWidgetPacker {
     for (const filePath of filePaths) {
       const p = path.resolve(this.buildWidgetPath, filePath);
       const fileContent = await fsp.readFile(p, "utf8");
-      const regex = new RegExp(/console\.error\(([^)]+)\);?/g);
-      const result = fileContent.replace(regex, "");
+      const regexError = new RegExp(/console\.error\((.|\n)*?\);?/g);
+      const result = fileContent.replace(regexError, "");
   
       await fsp.writeFile(p, result, "utf8");
       console.log(`console.error was removed from file: ${filePath}`);
