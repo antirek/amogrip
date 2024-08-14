@@ -5,9 +5,7 @@ import JSZip from 'jszip'
 import {globby} from 'globby';
 import uniqid from 'uniqid'
 import decomment from 'decomment';
-// import {transformSync} from '@babel/core';
-// import stripDebug from 'strip-debug';
-import * as UglifyJS from "uglify-js";
+
 
 export class AmoWidgetPacker {
   buildWidgetPath;
@@ -157,20 +155,27 @@ export class AmoWidgetPacker {
       const fileContent = await fsp.readFile(p, "utf8");
       // const regex = new RegExp(/console\.log\(([^)]+)\);?/g);
       // const regexLog = new RegExp(/console\.log\((.|\n)*?\);?/g);
-      /*
-      const result = transformSync(fileContent, {
-        plugins: [stripDebug]
-      }).code;
-      */
-      const options = {
-        compress: {
-          drop_console: true,
-        },
-      };
-      const result = UglifyJS.minify(fileContent, options).code;
-
-      console.log('result', result);
       // const result = fileContent.replace(regexLog, "");
+
+      const namespaces = ['console'];
+      const methods = ['log', 'warn', 'error'];
+
+      var regex_console = new RegExp(
+        ("(" + namespaces.join("|") + ")" +
+            ".(?:" + methods.join("|") +
+            ")\\s{0,}\\([^;]*\\)(?!\\s*[;,]?\\s*\\/\\*\\s*" +
+            "RemoveLogging:skip\\s*\\*\\/)\\s{0,};?"),
+        "gi"
+      );
+      let result = fileContent.replace(regex_console, "void 0;");
+      const regex = /console\.(log|warn|error|info|debug|trace|dir|dirxml|table|time|timeLog|timeEnd|assert|clear|count|countReset|group|groupCollapsed|groupEnd)/g;
+      
+      result = result.replace(regex, 'true');      
+      const regex2 = /console/g;
+
+      result = result.replace(regex2, 'true');
+      // console.log('result', result);
+      
   
       await fsp.writeFile(p, result, "utf8");
       console.log(`console.log was removed from file: ${filePath}`);
