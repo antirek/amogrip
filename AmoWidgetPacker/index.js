@@ -158,7 +158,31 @@ export class AmoWidgetPacker {
       // const result = fileContent.replace(regexLog, "");
 
       const namespaces = ['console'];
-      const methods = ['log', 'warn', 'error'];
+      const methods = [
+        "log",
+        "warn",
+        "error",
+        "info",
+        "debug",
+        "trace",
+        "dir",
+        "dirxml",
+        "table",
+        "time",
+        "timeLog",
+        "timeEnd",
+        "assert",
+        "clear",
+        "count",
+        "countReset",
+        "group",
+        "groupCollapsed",
+        "groupEnd",
+        "profile",
+        "profileEnd",
+        "timeStamp",
+        "timeOrigin",
+      ];;
 
       var regex_console = new RegExp(
         ("(" + namespaces.join("|") + ")" +
@@ -168,15 +192,14 @@ export class AmoWidgetPacker {
         "gi"
       );
       let result = fileContent.replace(regex_console, "void 0;");
-      const regex = /console\.(log|warn|error|info|debug|trace|dir|dirxml|table|time|timeLog|timeEnd|assert|clear|count|countReset|group|groupCollapsed|groupEnd)/g;
-      
-      result = result.replace(regex, 'true');      
+      const regex = new RegExp(("console.("+ methods.join("|") + ")"), "g");
+
+      result = result.replace(regex, 'true');
       const regex2 = /console/g;
 
       result = result.replace(regex2, 'true');
       // console.log('result', result);
-      
-  
+
       await fsp.writeFile(p, result, "utf8");
       console.log(`console.log was removed from file: ${filePath}`);
     };
