@@ -15,6 +15,7 @@ export class AmoWidgetPacker {
   version;
   buildFile;
   devEntryPoint;
+  outputDir;
 
   constructor(options) {
     this.buildWidgetPath = options.buildWidgetPath || './build';
@@ -23,10 +24,12 @@ export class AmoWidgetPacker {
     this.bundleType = options.bundleType || 'dev';
     this.buildFile = options.buildFile || 'build.js';
     this.devEntryPoint = options.devEntryPoint || 'http://localhost:3000/';
+    this.outputDir = options.outputDir || './output';
   }
 
-  get archivePath() {
-    return path.resolve(this.buildWidgetPath, '..'), 'widget.zip';
+  async getArchivePath() {
+    await this.createFolder(this.outputDir);
+    return path.join(this.outputDir, 'widget.zip');
   }
 
   async createTempFolder() {
@@ -45,15 +48,7 @@ export class AmoWidgetPacker {
     await this.prepareScript();
     await this.updateManifest();
     await this.removeComments();
-
-    // const filesConsoleLogs = await this.checkForConsoleLogs();
     await this.removeConsoleLog();
-
-    /*
-    const filesConsoleError = await this.checkForConsoleErrors();
-    await this.removeConsoleError(filesConsoleError);
-    */
-
     await this.zip();
   }
 
@@ -94,13 +89,14 @@ export class AmoWidgetPacker {
     });
 
     const archive = (await zip.generateAsync({ type: 'nodebuffer' }));
-    await fsp.writeFile(this.archivePath, archive)
-    const stats = await fsp.stat(this.archivePath)
-    console.log('archive path', this.archivePath);
+    const archivePath = await this.getArchivePath()
+    await fsp.writeFile(archivePath, archive);
+    const stats = await fsp.stat(archivePath)
+    console.log('archive path', archivePath);
     console.log('archive size', `${Math.round(stats.size / 1024)} KB`);
     console.log('archive ready');
 
-    return this.archivePath
+    return archivePath
   }
 
   async removeComments () {
@@ -122,29 +118,6 @@ export class AmoWidgetPacker {
 
     await fsp.writeFile(path.resolve(this.buildWidgetPath, 'manifest.json'), modifiedManifestFile);
   }
-
-  
-  
-  async checkForConsoleLogs(showInfo = true) {
-    const filesWithConsoles = [];
-    const filePaths = await globby(['**/**.js'], { cwd: this.buildWidgetPath })
-    console.log('check console.log', filePaths.length);
-    for (const filePath of filePaths) {
-      const p = path.resolve(this.buildWidgetPath, filePath)
-      const fileContent = await fsp.readFile(p, 'utf8');
-      // const regexLog = new RegExp(/console\.log\((.|\n)*?\);?/g);
-      // const regexLog = new RegExp(/console\.log\(.*?\);?/g);
-      const regexLog = new RegExp(/console\.log\((.|\n)*?\);?/g);
-      if (regexLog.test(fileContent)) {
-        if (showInfo) {
-          console.log(`console.log was found in file: ${filePath}`);
-        }
-        filesWithConsoles.push(filePath);
-      }
-    };
-  
-    return filesWithConsoles;
-  }  
   
   async removeConsoleLog() {
     const filePaths = await globby(['**/**.js'], { cwd: this.buildWidgetPath })
@@ -157,7 +130,7 @@ export class AmoWidgetPacker {
       // const regexLog = new RegExp(/console\.log\((.|\n)*?\);?/g);
       // const result = fileContent.replace(regexLog, "");
 
-      const namespaces = ['console'];
+      const namespaces = ['console', 'window.console'];
       const methods = [
         "log",
         "warn",
@@ -192,11 +165,11 @@ export class AmoWidgetPacker {
         "gi"
       );
       let result = fileContent.replace(regex_console, "void 0;");
-      const regex = new RegExp(("console.("+ methods.join("|") + ")"), "g");
 
+      const regex = new RegExp(("(" + namespaces.join("|") + ").("+ methods.join("|") + ")"), "gi");
       result = result.replace(regex, 'true');
-      const regex2 = /console/g;
 
+      const regex2 = /console/gi;
       result = result.replace(regex2, 'true');
       // console.log('result', result);
 
