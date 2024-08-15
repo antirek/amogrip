@@ -2,7 +2,7 @@ import { AmoWidgetPacker } from './index.js';
 
 
 const options = {
-  buildWidgetPath: './build',
+  bundleDir: './bundle',
   bundleType: 'production',
   widgetDir: './widget',
   version: '0.0.1',

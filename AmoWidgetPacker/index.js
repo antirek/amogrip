@@ -8,7 +8,7 @@ import decomment from 'decomment';
 
 
 export class AmoWidgetPacker {
-  buildWidgetPath;
+  bundlePath;
   widgetDir;
   bundleType;
   debugKey = 'rsDebugUrl_' + uniqid();
@@ -18,7 +18,8 @@ export class AmoWidgetPacker {
   outputDir;
 
   constructor(options) {
-    this.buildWidgetPath = options.buildWidgetPath || './build';
+    this.bundleDir = options.bundleDir || './bundle';
+    this.distDir = options.distDir || './dist';
     this.widgetDir = options.widgetDir || './widget';
     this.version = options.version || 'latest';
     this.bundleType = options.bundleType || 'dev';
@@ -28,37 +29,49 @@ export class AmoWidgetPacker {
   }
 
   async getArchivePath() {
-    await this.createFolder(this.outputDir);
+    await this.createDir(this.outputDir);
     return path.join(this.outputDir, 'widget.zip');
   }
 
-  async createTempFolder() {
-    return this.createFolder(this.buildWidgetPath)
+  async createBundleDir() {
+    return this.createDir(this.bundleDir)
   }
 
-  async createFolder(path) {
-    const exists = await fse.pathExists(path)
-    if (!exists) await fsp.mkdir(path)
+  async createDir(path) {
+    const exists = await fse.pathExists(path);
+    if (!exists) await fsp.mkdir(path);
   }
 
   async pack() {
-    await this.clean();
-    await this.createTempFolder();
-    await this.copyDir();
+    await this.cleanBundleDir();
+    await this.createBundleDir();
+    await this.copyWidgetDir();
+    await this.copyDistDir();
     await this.prepareScript();
     await this.updateManifest();
-    await this.removeComments();
+    //await this.removeComments();
     await this.removeConsoleLog();
     await this.zip();
   }
 
-  async clean() {
-    await fse.remove(this.buildWidgetPath)
+  async cleanBundleDir() {
+    const exists = await fse.pathExists(path);
+    if(exists) await fse.remove(this.bundlePath)
     console.log('build dir removed');
   }
 
-  async copyDir () {
-    await fse.copy(this.widgetDir, path.resolve(this.buildWidgetPath))
+  async copyWidgetDir () {
+    const exists = await fse.pathExists(this.widgetDir);
+    if (exists) {
+      await fse.copy(this.widgetDir, path.resolve(this.bundleDir))
+    }
+  }
+
+  async copyDistDir () {
+    const exists = await fse.pathExists(this.distDir);
+    if (exists) {
+      await fse.copy(this.distDir, path.resolve(this.bundleDir))
+    }
   }
 
   async prepareScript () {
@@ -69,18 +82,18 @@ export class AmoWidgetPacker {
     if (this.bundleType === 'dev') {
       modifiedScriptFile = scriptFile.replace('@entrypoint@', `\${${localStoragePlace} || '${this.devEntryPoint}'}`);
     } else {
-      modifiedScriptFile = scriptFile.replace('@entrypoint@', `./build.js?version=${this.version}`);
+      modifiedScriptFile = scriptFile.replace('@entrypoint@', `./js/app.js?version=${this.version}`);
     }
 
-    await fsp.writeFile(path.resolve(this.buildWidgetPath, 'script.js'), modifiedScriptFile);
+    await fsp.writeFile(path.resolve(this.bundleDir, 'script.js'), modifiedScriptFile);
   }
 
   async zip() {
     const zip = new JSZip();
-    const filePaths = await globby(['**', '!*.zip'], { cwd: this.buildWidgetPath })
+    const filePaths = await globby(['**', '!*.zip'], { cwd: this.bundleDir })
 
     filePaths.forEach(filePath => {
-      zip.file(filePath, fsp.readFile(path.resolve(this.buildWidgetPath, filePath)), {
+      zip.file(filePath, fsp.readFile(path.resolve(this.bundleDir, filePath)), {
         compression: "DEFLATE",
         compressionOptions: {
           level: 9
@@ -100,7 +113,7 @@ export class AmoWidgetPacker {
   }
 
   async removeComments () {
-    const buildFilePath = path.resolve(this.buildWidgetPath, this.buildFile);
+    const buildFilePath = path.resolve(this.bundleDir, this.buildFile);
     const exist = await fse.pathExists(buildFilePath);
     if(!exist) return;
 
@@ -116,15 +129,15 @@ export class AmoWidgetPacker {
     manifestObject.widget.version = this.version;
     const modifiedManifestFile = JSON.stringify(manifestObject, null, 2);
 
-    await fsp.writeFile(path.resolve(this.buildWidgetPath, 'manifest.json'), modifiedManifestFile);
+    await fsp.writeFile(path.resolve(this.bundleDir, 'manifest.json'), modifiedManifestFile);
   }
   
   async removeConsoleLog() {
-    const filePaths = await globby(['**/**.js'], { cwd: this.buildWidgetPath })
+    const filePaths = await globby(['**/**.js'], { cwd: this.bundleDir })
     console.log('files for check', filePaths.length);
 
     for (const filePath of filePaths) {
-      const p = path.resolve(this.buildWidgetPath, filePath);
+      const p = path.resolve(this.bundleDir, filePath);
       const fileContent = await fsp.readFile(p, "utf8");
       // const regex = new RegExp(/console\.log\(([^)]+)\);?/g);
       // const regexLog = new RegExp(/console\.log\((.|\n)*?\);?/g);
